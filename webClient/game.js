@@ -741,23 +741,24 @@ function updatePlayer(delta) {
   // Calculate forward/strafe inputs based on yaw
   let moveForward = 0;
   let moveRight = 0;
-  if (state.keys.has('KeyW')) moveForward += 1;
-  if (state.keys.has('KeyS')) moveForward -= 1;
-  if (state.keys.has('KeyA')) moveRight -= 1;
-  if (state.keys.has('KeyD')) moveRight += 1;
+  if (state.keys.has('KeyW') || state.keys.has('ArrowUp')) moveForward += 1;
+  if (state.keys.has('KeyS') || state.keys.has('ArrowDown')) moveForward -= 1;
+  if (state.keys.has('KeyA') || state.keys.has('ArrowLeft')) moveRight -= 1;
+  if (state.keys.has('KeyD') || state.keys.has('ArrowRight')) moveRight += 1;
 
   if (moveForward !== 0 || moveRight !== 0) {
     const len = Math.hypot(moveForward, moveRight);
     const nf = moveForward / len;
     const nr = moveRight / len;
 
-    // In world coordinates (+Z forward at yaw = 0, +X right at yaw = 0):
-    // forward = (sin(yaw), 0, cos(yaw))
-    // right   = (cos(yaw), 0, -sin(yaw))
+    // In Three.js world coordinates with camera rotation (pitch, yaw + PI, 0, 'YXZ'):
+    // At yaw = 0, camera faces +Z and camera right is -X.
+    // Forward vector in horizontal plane: ( sin(yaw), 0,  cos(yaw))
+    // Right vector in horizontal plane:   (-cos(yaw), 0,  sin(yaw))
     const sinY = Math.sin(state.yaw);
     const cosY = Math.cos(state.yaw);
-    const dx = (nf * sinY + nr * cosY) * PLAYER_SPEED * delta;
-    const dz = (nf * cosY - nr * sinY) * PLAYER_SPEED * delta;
+    const dx = (nf * sinY - nr * cosY) * PLAYER_SPEED * delta;
+    const dz = (nf * cosY + nr * sinY) * PLAYER_SPEED * delta;
 
     state.playerPos.x += dx;
     state.playerPos.z += dz;
@@ -1438,7 +1439,7 @@ window.addEventListener('mousedown', (e) => {
 window.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement !== canvas || state.isDead) return;
   const sens = 0.0022;
-  state.yaw += e.movementX * sens;
+  state.yaw -= e.movementX * sens;
   state.pitch -= e.movementY * sens;
   // Clamp pitch between -85 deg and +85 deg
   state.pitch = THREE.MathUtils.clamp(state.pitch, -1.48, 1.48);
