@@ -125,6 +125,8 @@ const state = {
   playerPos: new THREE.Vector3(0, 1, 0),
   velocityY: 0.0,
   isGrounded: true,
+  isZoomed: false,
+  cPressTime: 0,
   
   // Networking
   socket: null,
@@ -407,14 +409,12 @@ function buildArena() {
   rail1L.rotation.x = -angle;
   rail1L.castShadow = true;
   scene.add(rail1L);
-  addObstacle(6.55, 6.75, 1.0, 6.5, -4.0, 6.0);
 
   const rail1R = new THREE.Mesh(railGeo, railMat);
   rail1R.position.set(10.35, 3.9, 1.0);
   rail1R.rotation.x = -angle;
   rail1R.castShadow = true;
   scene.add(rail1R);
-  addObstacle(10.25, 10.45, 1.0, 6.5, -4.0, 6.0);
 
   // Stair 2 (West flank at x = -8.5): climbs -Z from z = 3.5 to z = -5.5, y = 1.25 to 5.75
   for (let i = 0; i < 10; i++) {
@@ -426,14 +426,12 @@ function buildArena() {
   rail2L.rotation.x = angle;
   rail2L.castShadow = true;
   scene.add(rail2L);
-  addObstacle(-6.75, -6.55, 1.0, 6.5, -6.0, 4.0);
 
   const rail2R = new THREE.Mesh(railGeo, railMat);
   rail2R.position.set(-10.35, 3.9, -1.0);
   rail2R.rotation.x = angle;
   rail2R.castShadow = true;
   scene.add(rail2R);
-  addObstacle(-10.45, -10.25, 1.0, 6.5, -6.0, 4.0);
 
   // 4. Support Pillars (scale 1, 5, 1)
   const pillars = [
@@ -675,7 +673,9 @@ function getFloorHeightBelow(x, currentY, z, isGrounded) {
 }
 
 function getCeilingHeightAbove(x, currentY, z) {
-  // Check 1st floor slabs bottom (ceiling at y = 5.5)
+  let minCeiling = Infinity;
+
+  // 1. Check 1st floor slabs bottom (ceiling at y = 5.5)
   if (
     (x >= -20 && x <= 20 && z >= 6.0 && z <= 20.0) ||
     (x >= -20 && x <= 20 && z >= -20.0 && z <= -6.0) ||
@@ -683,10 +683,29 @@ function getCeilingHeightAbove(x, currentY, z) {
     (x >= -20.0 && x <= -12.0 && z >= -6.0 && z <= 6.0)
   ) {
     if (currentY < 5.5) {
-      return 5.5;
+      minCeiling = Math.min(minCeiling, 5.5);
     }
   }
-  return Infinity;
+
+  // 2. Underside of East Stair 1
+  if (x >= 6.75 && x <= 10.25 && z >= -4.0 && z <= 6.0) {
+    const rampY = 1.0 + ((z - (-4.0)) / 10.0) * 5.0;
+    const underside = rampY - 0.25;
+    if (currentY < underside) {
+      minCeiling = Math.min(minCeiling, underside);
+    }
+  }
+
+  // 3. Underside of West Stair 2
+  if (x >= -10.25 && x <= -6.75 && z >= -6.0 && z <= 4.0) {
+    const rampY = 6.0 - ((z - (-6.0)) / 10.0) * 5.0;
+    const underside = rampY - 0.25;
+    if (currentY < underside) {
+      minCeiling = Math.min(minCeiling, underside);
+    }
+  }
+
+  return minCeiling;
 }
 
 function resolvePlayerCollisions(pos, radius = 0.5) {
@@ -719,6 +738,61 @@ function resolvePlayerCollisions(pos, radius = 0.5) {
       else if (minPush === pushRight) pos.x = obs.maxX + radius;
       else if (minPush === pushDown) pos.z = obs.minZ - radius;
       else pos.z = obs.maxZ + radius;
+    }
+  }
+
+  // --- DYNAMIC STAIR & RAILING COLLISION RESOLUTION ---
+  // East Stair 1: x in [6.75, 10.25], z in [-4.0, 6.0]
+  if (pos.z >= -4.5 && pos.z <= 6.5) {
+    const clampedZ = Math.max(-4.0, Math.min(pos.z, 6.0));
+    const rampY = 1.0 + ((clampedZ - (-4.0)) / 10.0) * 5.0;
+
+    if (pos.y >= rampY - 0.4) {
+      // Player is walking ON Stair 1: railings keep player within stair edges
+      if (pos.z >= -3.8 && pos.z <= 5.8) {
+        if (pos.x < 6.75 + radius && pos.x > 6.75 - radius) pos.x = 6.75 + radius;
+        else if (pos.x > 10.25 - radius && pos.x < 10.25 + radius) pos.x = 10.25 - radius;
+      }
+    } else {
+      // Player is UNDER Stair 1 (pos.y < rampY - 0.4)
+      // Check low headroom wedge where standing is impossible (< 1.8m headroom)
+      const headroom = (rampY - 0.25) - pos.y;
+      if (headroom < 1.8 && pos.z >= -4.0 && pos.z <= 0.1) {
+        if (pos.x + radius > 6.75 && pos.x - radius < 10.25) {
+          if (pos.z > -3.5) {
+            if (pos.x < 8.5) pos.x = 6.75 - radius;
+            else pos.x = 10.25 + radius;
+          }
+        }
+      }
+      // If headroom >= 1.8m (z > 0.1 up to 6.0), player is free to cross under the stairs!
+    }
+  }
+
+  // West Stair 2: x in [-10.25, -6.75], z in [-6.0, 4.0]
+  if (pos.z >= -6.5 && pos.z <= 4.5) {
+    const clampedZ = Math.max(-6.0, Math.min(pos.z, 4.0));
+    const rampY = 6.0 - ((clampedZ - (-6.0)) / 10.0) * 5.0;
+
+    if (pos.y >= rampY - 0.4) {
+      // Player is walking ON Stair 2: railings keep player within stair edges
+      if (pos.z >= -5.8 && pos.z <= 3.8) {
+        if (pos.x < -10.25 + radius && pos.x > -10.25 - radius) pos.x = -10.25 + radius;
+        else if (pos.x > -6.75 - radius && pos.x < -6.75 + radius) pos.x = -6.75 - radius;
+      }
+    } else {
+      // Player is UNDER Stair 2 (pos.y < rampY - 0.4)
+      // Check low headroom wedge (< 1.8m headroom)
+      const headroom = (rampY - 0.25) - pos.y;
+      if (headroom < 1.8 && pos.z >= -0.1 && pos.z <= 4.0) {
+        if (pos.x + radius > -10.25 && pos.x - radius < -6.75) {
+          if (pos.z < 3.5) {
+            if (pos.x > -8.5) pos.x = -6.75 + radius;
+            else pos.x = -10.25 - radius;
+          }
+        }
+      }
+      // If headroom >= 1.8m (z < -0.1 down to -6.0), player is free to cross under the stairs!
     }
   }
 
@@ -824,6 +898,30 @@ function updatePlayer(delta) {
     return;
   }
 
+  // Zoom Aim Smoothing (Field of View)
+  const targetFov = state.isZoomed ? 32 : 75;
+  if (Math.abs(camera.fov - targetFov) > 0.05) {
+    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, Math.min(1.0, delta * 15.0));
+    camera.updateProjectionMatrix();
+  }
+
+  // Gun Position & Aim Alignment (ADS)
+  if (localGunMesh) {
+    const targetGunX = state.isZoomed ? 0.0 : 0.32;
+    const targetGunY = state.isZoomed ? -0.17 : -0.24;
+    const targetGunZ = state.isZoomed ? -0.42 : -0.55;
+    const targetRotX = state.isZoomed ? THREE.MathUtils.degToRad(-8) : THREE.MathUtils.degToRad(-20);
+    const targetRotY = state.isZoomed ? THREE.MathUtils.degToRad(0) : THREE.MathUtils.degToRad(-20);
+    const targetRotZ = state.isZoomed ? THREE.MathUtils.degToRad(0) : THREE.MathUtils.degToRad(-5);
+
+    localGunMesh.position.x = THREE.MathUtils.lerp(localGunMesh.position.x, targetGunX, Math.min(1.0, delta * 15.0));
+    localGunMesh.position.y = THREE.MathUtils.lerp(localGunMesh.position.y, targetGunY, Math.min(1.0, delta * 15.0));
+    localGunMesh.position.z = THREE.MathUtils.lerp(localGunMesh.position.z, targetGunZ, Math.min(1.0, delta * 15.0));
+    localGunMesh.rotation.x = THREE.MathUtils.lerp(localGunMesh.rotation.x, targetRotX, Math.min(1.0, delta * 15.0));
+    localGunMesh.rotation.y = THREE.MathUtils.lerp(localGunMesh.rotation.y, targetRotY, Math.min(1.0, delta * 15.0));
+    localGunMesh.rotation.z = THREE.MathUtils.lerp(localGunMesh.rotation.z, targetRotZ, Math.min(1.0, delta * 15.0));
+  }
+
   // Update Camera Position & Rotation
   // Camera eye level is player standing position + 1.7 units
   camera.position.set(state.playerPos.x, state.playerPos.y + 1.7, state.playerPos.z);
@@ -851,9 +949,6 @@ function fireBullet() {
   // Gun recoil animation
   if (localGunMesh) {
     localGunMesh.position.z += 0.08;
-    setTimeout(() => {
-      if (localGunMesh) localGunMesh.position.z = -0.55;
-    }, 70);
   }
 
   // Bullet spawn: player position + eye offset
@@ -965,6 +1060,21 @@ function updateBullets(delta) {
       hitObstacle = true;
     }
 
+    // Check hit against stair ramps
+    if (!hitObstacle) {
+      if (currPos.x >= 6.75 && currPos.x <= 10.25 && currPos.z >= -4.0 && currPos.z <= 6.0) {
+        const rampY = 1.0 + ((currPos.z - (-4.0)) / 10.0) * 5.0;
+        if (Math.abs(currPos.y - rampY) <= 0.35 || (currPos.z < 0.1 && currPos.y <= rampY)) {
+          hitObstacle = true;
+        }
+      } else if (currPos.x >= -10.25 && currPos.x <= -6.75 && currPos.z >= -6.0 && currPos.z <= 4.0) {
+        const rampY = 6.0 - ((currPos.z - (-6.0)) / 10.0) * 5.0;
+        if (Math.abs(currPos.y - rampY) <= 0.35 || (currPos.z > -0.1 && currPos.y <= rampY)) {
+          hitObstacle = true;
+        }
+      }
+    }
+
     if (hitObstacle || currPos.y < -50) {
       scene.remove(b.mesh);
       state.bullets.splice(i, 1);
@@ -1030,6 +1140,10 @@ function triggerDeath() {
   state.pitch = THREE.MathUtils.degToRad(-25);
   state.velocityY = 0;
   state.isGrounded = false;
+  state.isZoomed = false;
+  camera.fov = 75;
+  camera.updateProjectionMatrix();
+  updateCrosshairZoomUI();
   camera.position.set(0, 7, -35);
   camera.rotation.set(state.pitch, state.yaw + Math.PI, 0, 'YXZ');
 
@@ -1047,6 +1161,10 @@ function respawnPlayer() {
   state.reloadTimer = 0;
   state.velocityY = 0;
   state.isGrounded = true;
+  state.isZoomed = false;
+  camera.fov = 75;
+  camera.updateProjectionMatrix();
+  updateCrosshairZoomUI();
 
   // Hide death screen
   deathScreen.hidden = true;
@@ -1436,9 +1554,21 @@ window.addEventListener('mousedown', (e) => {
   }
 });
 
+function updateCrosshairZoomUI() {
+  const ch = $('crosshair');
+  if (ch) {
+    if (state.isZoomed) {
+      ch.classList.add('zoomed');
+    } else {
+      ch.classList.remove('zoomed');
+    }
+  }
+}
+
 window.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement !== canvas || state.isDead) return;
-  const sens = 0.0022;
+  const zoomFactor = (camera ? camera.fov : 75) / 75;
+  const sens = 0.0022 * zoomFactor;
   state.yaw -= e.movementX * sens;
   state.pitch -= e.movementY * sens;
   // Clamp pitch between -85 deg and +85 deg
@@ -1465,6 +1595,15 @@ window.addEventListener('keydown', (e) => {
 
   state.keys.add(e.code);
 
+  // Press C to Zoom Aim (toggle on tap, or hold)
+  if (e.code === 'KeyC' && !state.isDead && connectScreen.hidden) {
+    if (!e.repeat) {
+      state.cPressTime = performance.now();
+      state.isZoomed = !state.isZoomed;
+      updateCrosshairZoomUI();
+    }
+  }
+
   // Jump
   if (e.code === 'Space' && state.isGrounded && !state.isDead) {
     state.velocityY = JUMP_FORCE;
@@ -1484,6 +1623,15 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('keyup', (e) => {
   state.keys.delete(e.code);
+
+  // Release C unzooms if held for more than 280ms
+  if (e.code === 'KeyC') {
+    if (state.cPressTime && (performance.now() - state.cPressTime > 280)) {
+      state.isZoomed = false;
+      updateCrosshairZoomUI();
+    }
+    state.cPressTime = 0;
+  }
 });
 
 // First user interaction auto-starts audio
