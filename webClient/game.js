@@ -31,16 +31,16 @@ const COLOR_PALETTE = {
 };
 const COLOR_NAMES = Object.keys(COLOR_PALETTE);
 
-// Spawn points matching desktop player.py
+// Spawn points matching desktop player.py (Z negated for Three.js -Z forward)
 const SPAWN_POINTS = [
   new THREE.Vector3(0, 1, 0),
   new THREE.Vector3(12, 1, 0),
-  new THREE.Vector3(0, 1, 12),
-  new THREE.Vector3(12, 1, 12),
-  new THREE.Vector3(-6, 1, -6),
-  new THREE.Vector3(6, 1, -6),
-  new THREE.Vector3(0, 6, 14),
+  new THREE.Vector3(0, 1, -12),
+  new THREE.Vector3(12, 1, -12),
+  new THREE.Vector3(-6, 1, 6),
+  new THREE.Vector3(6, 1, 6),
   new THREE.Vector3(0, 6, -14),
+  new THREE.Vector3(0, 6, 14),
   new THREE.Vector3(16, 6, 0),
   new THREE.Vector3(-16, 6, 0)
 ];
@@ -275,7 +275,7 @@ function setupThree() {
   scene.add(hemiLight);
 
   const dirLight = new THREE.DirectionalLight(0xffffff, 1.4);
-  dirLight.position.set(-20, 40, 20);
+  dirLight.position.set(-20, 40, -20);
   dirLight.castShadow = true;
   dirLight.shadow.mapSize.width = 2048;
   dirLight.shadow.mapSize.height = 2048;
@@ -369,18 +369,18 @@ function buildArena() {
     dark1 = !dark1;
   }
 
-  // 2. 1st Floor (Upper Deck) Platforms (from client/floor.py)
+  // 2. 1st Floor (Upper Deck) Platforms (matching client/floor.py with -Z as North)
   // Standing height y = 6.0, slab thickness 0.5, center y = 5.75
   const floorY = 5.75;
   const slabThick = 0.5;
 
-  // North platform: (0, 5.75, 13), scale (40, 0.5, 14)
-  createBoxEntity(0, floorY, 13, 40, slabThick, 14, floorTexture, 20, 7, false);
-  addObstacle(-20, 20, 5.5, 6.0, 6, 20, true);
-
-  // South platform: (0, 5.75, -13), scale (40, 0.5, 14)
+  // North platform: (0, 5.75, -13), scale (40, 0.5, 14)
   createBoxEntity(0, floorY, -13, 40, slabThick, 14, floorTexture, 20, 7, false);
   addObstacle(-20, 20, 5.5, 6.0, -20, -6, true);
+
+  // South platform: (0, 5.75, 13), scale (40, 0.5, 14)
+  createBoxEntity(0, floorY, 13, 40, slabThick, 14, floorTexture, 20, 7, false);
+  addObstacle(-20, 20, 5.5, 6.0, 6, 20, true);
 
   // East walkway: (16, 5.75, 0), scale (8, 0.5, 12)
   createBoxEntity(16, floorY, 0, 8, slabThick, 12, floorTexture, 4, 6, false);
@@ -391,9 +391,9 @@ function buildArena() {
   addObstacle(-20, -12, 5.5, 6.0, -6, 6, true);
 
   // 3. Stairs (East & West)
-  // Stair 1 (East flank at x = 8.5): climbs +Z from z = -3.5 to z = 5.5, y = 1.25 to 5.75
+  // Stair 1 (East flank at x = 8.5): climbs -Z from ground (z = 4.0, y = 1.0) to North 1st floor (z = -6.0, y = 6.0)
   for (let i = 0; i < 10; i++) {
-    createBoxEntity(8.5, 1.25 + i * 0.5, -3.5 + i * 1.0, 3.5, 0.5, 1.0, floorTexture, 2, 1, false);
+    createBoxEntity(8.5, 1.25 + i * 0.5, 3.5 - i * 1.0, 3.5, 0.5, 1.0, floorTexture, 2, 1, false);
   }
   // Stair 1 Railings
   const deltaZ = 10.0;
@@ -405,31 +405,31 @@ function buildArena() {
   const railMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.85 });
 
   const rail1L = new THREE.Mesh(railGeo, railMat);
-  rail1L.position.set(6.65, 3.9, 1.0);
-  rail1L.rotation.x = -angle;
+  rail1L.position.set(6.65, 3.9, -1.0);
+  rail1L.rotation.x = angle;
   rail1L.castShadow = true;
   scene.add(rail1L);
 
   const rail1R = new THREE.Mesh(railGeo, railMat);
-  rail1R.position.set(10.35, 3.9, 1.0);
-  rail1R.rotation.x = -angle;
+  rail1R.position.set(10.35, 3.9, -1.0);
+  rail1R.rotation.x = angle;
   rail1R.castShadow = true;
   scene.add(rail1R);
 
-  // Stair 2 (West flank at x = -8.5): climbs -Z from z = 3.5 to z = -5.5, y = 1.25 to 5.75
+  // Stair 2 (West flank at x = -8.5): climbs +Z from ground (z = -4.0, y = 1.0) to South 1st floor (z = 6.0, y = 6.0)
   for (let i = 0; i < 10; i++) {
-    createBoxEntity(-8.5, 1.25 + i * 0.5, 3.5 - i * 1.0, 3.5, 0.5, 1.0, floorTexture, 2, 1, false);
+    createBoxEntity(-8.5, 1.25 + i * 0.5, -3.5 + i * 1.0, 3.5, 0.5, 1.0, floorTexture, 2, 1, false);
   }
   // Stair 2 Railings
   const rail2L = new THREE.Mesh(railGeo, railMat);
-  rail2L.position.set(-6.65, 3.9, -1.0);
-  rail2L.rotation.x = angle;
+  rail2L.position.set(-6.65, 3.9, 1.0);
+  rail2L.rotation.x = -angle;
   rail2L.castShadow = true;
   scene.add(rail2L);
 
   const rail2R = new THREE.Mesh(railGeo, railMat);
-  rail2R.position.set(-10.35, 3.9, -1.0);
-  rail2R.rotation.x = angle;
+  rail2R.position.set(-10.35, 3.9, 1.0);
+  rail2R.rotation.x = -angle;
   rail2R.castShadow = true;
   scene.add(rail2R);
 
@@ -447,41 +447,43 @@ function buildArena() {
   // 5. Railings along 1st floor atrium
   createBoxEntity(12, 6.5, 0, 0.4, 1.0, 12, wallTexture, 1, 6);
   createBoxEntity(-12, 6.5, 0, 0.4, 1.0, 12, wallTexture, 1, 6);
-  createBoxEntity(-2.625, 6.5, 6, 18.75, 1.0, 0.4, wallTexture, 9, 1);
-  createBoxEntity(11.125, 6.5, 6, 1.75, 1.0, 0.4, wallTexture, 1, 1);
-  createBoxEntity(2.625, 6.5, -6, 18.75, 1.0, 0.4, wallTexture, 9, 1);
-  createBoxEntity(-11.125, 6.5, -6, 1.75, 1.0, 0.4, wallTexture, 1, 1);
+  // North atrium railings (leaving stair opening at x = 8.5)
+  createBoxEntity(-2.625, 6.5, -6, 18.75, 1.0, 0.4, wallTexture, 9, 1);
+  createBoxEntity(11.125, 6.5, -6, 1.75, 1.0, 0.4, wallTexture, 1, 1);
+  // South atrium railings (leaving stair opening at x = -8.5)
+  createBoxEntity(2.625, 6.5, 6, 18.75, 1.0, 0.4, wallTexture, 9, 1);
+  createBoxEntity(-11.125, 6.5, 6, 1.75, 1.0, 0.4, wallTexture, 1, 1);
 
   // 6. 1st Floor Tactical Cover Barricades
-  createBoxEntity(0, 7.5, 15, 4, 3.0, 1.0, wallTexture, 2, 1.5);
   createBoxEntity(0, 7.5, -15, 4, 3.0, 1.0, wallTexture, 2, 1.5);
+  createBoxEntity(0, 7.5, 15, 4, 3.0, 1.0, wallTexture, 2, 1.5);
 
   // 7. Tactical Cover Walls from client/map.py (Exact positions and dimensions)
   // In Ursina: origin_y = -0.5 means bottom at y=1.0, so centerY = 1.0 + sy/2
   const wallsData = [
-    // Top-Right (+X, +Z) corner hiding bunker
-    { pos: [16, 3, 13], scale: [1.5, 4, 6] },
-    { pos: [13, 3, 16], scale: [6, 4, 1.5] },
-
-    // Top-Left (-X, +Z) corner hiding bunker
-    { pos: [-16, 3, 13], scale: [1.5, 4, 6] },
-    { pos: [-13, 3, 16], scale: [6, 4, 1.5] },
-
-    // Bottom-Left (-X, -Z) corner hiding bunker
-    { pos: [-16, 3, -13], scale: [1.5, 4, 6] },
-    { pos: [-13, 3, -16], scale: [6, 4, 1.5] },
-
-    // Bottom-Right (+X, -Z) corner hiding bunker
+    // Top-Right (+X, -Z) corner hiding bunker
     { pos: [16, 3, -13], scale: [1.5, 4, 6] },
     { pos: [13, 3, -16], scale: [6, 4, 1.5] },
 
+    // Top-Left (-X, -Z) corner hiding bunker
+    { pos: [-16, 3, -13], scale: [1.5, 4, 6] },
+    { pos: [-13, 3, -16], scale: [6, 4, 1.5] },
+
+    // Bottom-Left (-X, +Z) corner hiding bunker
+    { pos: [-16, 3, 13], scale: [1.5, 4, 6] },
+    { pos: [-13, 3, 16], scale: [6, 4, 1.5] },
+
+    // Bottom-Right (+X, +Z) corner hiding bunker
+    { pos: [16, 3, 13], scale: [1.5, 4, 6] },
+    { pos: [13, 3, 16], scale: [6, 4, 1.5] },
+
     // Perimeter mid-lane cover
     { pos: [-15, 2.75, 0], scale: [1.5, 3.5, 4] },
-    { pos: [0, 2.75, -15], scale: [4, 3.5, 1.5] },
+    { pos: [0, 2.75, 15], scale: [4, 3.5, 1.5] },
 
     // Center tactical barricades
-    { pos: [-4, 2.5, 3], scale: [3.5, 3, 1.2] },
-    { pos: [4, 2.5, -3], scale: [3.5, 3, 1.2] },
+    { pos: [-4, 2.5, -3], scale: [3.5, 3, 1.2] },
+    { pos: [4, 2.5, 3], scale: [3.5, 3, 1.2] },
   ];
 
   for (const w of wallsData) {
@@ -543,11 +545,11 @@ function createEnemyMesh(id, username) {
   bodyMesh.receiveShadow = true;
   group.add(bodyMesh);
 
-  // Attached gun: position (0.55, 0.5, 0.6), scale (0.1, 0.2, 0.65)
+  // Attached gun: position (0.55, 1.5, -0.6) on right side facing forward (-Z)
   const gunGeo = new THREE.BoxGeometry(0.1, 0.2, 0.65);
   const gunMat = new THREE.MeshStandardMaterial({ color: hex, roughness: 0.4 });
   const gunMesh = new THREE.Mesh(gunGeo, gunMat);
-  gunMesh.position.set(0.55, 1.5, 0.6);
+  gunMesh.position.set(0.55, 1.5, -0.6);
   gunMesh.castShadow = true;
   group.add(gunMesh);
 
@@ -611,12 +613,12 @@ function updateEnemyTag(enemy) {
 // --- ACCURATE ARENA SURFACE & FLOOR DETECTION ---
 // Ground Floor: 40x40 from X: [-20, 20], Z: [-20, 20] at height y = 1.0
 // 1st Floor (Upper Deck): height y = 6.0 (ceiling at y = 5.5)
-//   North Platform: X: [-20, 20], Z: [6.0, 20.0]
-//   South Platform: X: [-20, 20], Z: [-20.0, -6.0]
+//   North Platform: X: [-20, 20], Z: [-20.0, -6.0]
+//   South Platform: X: [-20, 20], Z: [6.0, 20.0]
 //   East Walkway:   X: [12.0, 20.0], Z: [-6.0, 6.0]
 //   West Walkway:   X: [-20.0, -12.0], Z: [-6.0, 6.0]
-// East Stair 1: X: [6.75, 10.25], Z: [-4.0, 6.0], slope y = 1.0 + (z - (-4.0)) / 10.0 * 5.0
-// West Stair 2: X: [-10.25, -6.75], Z: [-6.0, 4.0], slope y = 6.0 - (z - (-6.0)) / 10.0 * 5.0
+// East Stair 1: X: [6.75, 10.25], Z: [-6.0, 4.0], slope y = 1.0 + ((4.0 - z) / 10.0) * 5.0
+// West Stair 2: X: [-10.25, -6.75], Z: [-4.0, 6.0], slope y = 1.0 + ((z - (-4.0)) / 10.0) * 5.0
 
 function getCandidateFloors(x, z) {
   const floors = [];
@@ -627,23 +629,23 @@ function getCandidateFloors(x, z) {
   }
 
   // 2. 1st Floor Platforms (Upper Deck at y = 6.0)
-  const onNorth = (x >= -20 && x <= 20 && z >= 6.0 && z <= 20.0);
-  const onSouth = (x >= -20 && x <= 20 && z >= -20.0 && z <= -6.0);
+  const onNorth = (x >= -20 && x <= 20 && z >= -20.0 && z <= -6.0);
+  const onSouth = (x >= -20 && x <= 20 && z >= 6.0 && z <= 20.0);
   const onEast = (x >= 12.0 && x <= 20.0 && z >= -6.0 && z <= 6.0);
   const onWest = (x >= -20.0 && x <= -12.0 && z >= -6.0 && z <= 6.0);
   if (onNorth || onSouth || onEast || onWest) {
     floors.push(6.0);
   }
 
-  // 3. East Stair 1: climbs +Z from z = -4.0 (y = 1.0) to z = 6.0 (y = 6.0)
-  if (x >= 6.75 && x <= 10.25 && z >= -4.0 && z <= 6.0) {
-    const rampY = 1.0 + ((z - (-4.0)) / 10.0) * 5.0;
+  // 3. East Stair 1: climbs -Z from z = 4.0 (y = 1.0) to z = -6.0 (y = 6.0)
+  if (x >= 6.75 && x <= 10.25 && z >= -6.0 && z <= 4.0) {
+    const rampY = 1.0 + ((4.0 - z) / 10.0) * 5.0;
     floors.push(rampY);
   }
 
-  // 4. West Stair 2: climbs -Z from z = 4.0 (y = 1.0) to z = -6.0 (y = 6.0)
-  if (x >= -10.25 && x <= -6.75 && z >= -6.0 && z <= 4.0) {
-    const rampY = 6.0 - ((z - (-6.0)) / 10.0) * 5.0;
+  // 4. West Stair 2: climbs +Z from z = -4.0 (y = 1.0) to z = 6.0 (y = 6.0)
+  if (x >= -10.25 && x <= -6.75 && z >= -4.0 && z <= 6.0) {
+    const rampY = 1.0 + ((z - (-4.0)) / 10.0) * 5.0;
     floors.push(rampY);
   }
 
@@ -662,13 +664,20 @@ function getFloorHeightBelow(x, currentY, z, isGrounded) {
   if (candidates.length === 0) return -999.0;
 
   // If grounded, allow small step up (0.55 units) matching Ursina
-  const maxAllowedY = isGrounded ? (currentY + 0.55) : (currentY + 0.05);
+  const maxAllowedY = isGrounded ? (currentY + 0.55) : (currentY + 0.1);
   let best = -999.0;
   for (const f of candidates) {
     if (f <= maxAllowedY && f > best) {
       best = f;
     }
   }
+
+  // Safety fallback: if player is within the 40x40 ground footprint and near ground level,
+  // ensure ground floor at 1.0 is recognized so player never falls through
+  if (best < 0 && x >= -20 && x <= 20 && z >= -20 && z <= 20 && currentY >= -0.5) {
+    best = 1.0;
+  }
+
   return best;
 }
 
@@ -677,8 +686,8 @@ function getCeilingHeightAbove(x, currentY, z) {
 
   // 1. Check 1st floor slabs bottom (ceiling at y = 5.5)
   if (
-    (x >= -20 && x <= 20 && z >= 6.0 && z <= 20.0) ||
     (x >= -20 && x <= 20 && z >= -20.0 && z <= -6.0) ||
+    (x >= -20 && x <= 20 && z >= 6.0 && z <= 20.0) ||
     (x >= 12.0 && x <= 20.0 && z >= -6.0 && z <= 6.0) ||
     (x >= -20.0 && x <= -12.0 && z >= -6.0 && z <= 6.0)
   ) {
@@ -687,18 +696,18 @@ function getCeilingHeightAbove(x, currentY, z) {
     }
   }
 
-  // 2. Underside of East Stair 1
-  if (x >= 6.75 && x <= 10.25 && z >= -4.0 && z <= 6.0) {
-    const rampY = 1.0 + ((z - (-4.0)) / 10.0) * 5.0;
+  // 2. Underside of East Stair 1 (x in [6.75, 10.25], z in [-6.0, 4.0])
+  if (x >= 6.75 && x <= 10.25 && z >= -6.0 && z <= 4.0) {
+    const rampY = 1.0 + ((4.0 - z) / 10.0) * 5.0;
     const underside = rampY - 0.25;
     if (currentY < underside) {
       minCeiling = Math.min(minCeiling, underside);
     }
   }
 
-  // 3. Underside of West Stair 2
-  if (x >= -10.25 && x <= -6.75 && z >= -6.0 && z <= 4.0) {
-    const rampY = 6.0 - ((z - (-6.0)) / 10.0) * 5.0;
+  // 3. Underside of West Stair 2 (x in [-10.25, -6.75], z in [-4.0, 6.0])
+  if (x >= -10.25 && x <= -6.75 && z >= -4.0 && z <= 6.0) {
+    const rampY = 1.0 + ((z - (-4.0)) / 10.0) * 5.0;
     const underside = rampY - 0.25;
     if (currentY < underside) {
       minCeiling = Math.min(minCeiling, underside);
@@ -742,57 +751,71 @@ function resolvePlayerCollisions(pos, radius = 0.5) {
   }
 
   // --- DYNAMIC STAIR & RAILING COLLISION RESOLUTION ---
-  // East Stair 1: x in [6.75, 10.25], z in [-4.0, 6.0]
-  if (pos.z >= -4.5 && pos.z <= 6.5) {
-    const clampedZ = Math.max(-4.0, Math.min(pos.z, 6.0));
-    const rampY = 1.0 + ((clampedZ - (-4.0)) / 10.0) * 5.0;
+  // East Stair 1: x in [6.75, 10.25], z in [-6.0, 4.0]
+  if (pos.z >= -6.5 && pos.z <= 4.5) {
+    const clampedZ = Math.max(-6.0, Math.min(pos.z, 4.0));
+    const rampY = 1.0 + ((4.0 - clampedZ) / 10.0) * 5.0;
 
     if (pos.y >= rampY - 0.4) {
       // Player is walking ON Stair 1: railings keep player within stair edges
-      if (pos.z >= -3.8 && pos.z <= 5.8) {
+      if (pos.z >= -5.8 && pos.z <= 3.8) {
         if (pos.x < 6.75 + radius && pos.x > 6.75 - radius) pos.x = 6.75 + radius;
         else if (pos.x > 10.25 - radius && pos.x < 10.25 + radius) pos.x = 10.25 - radius;
       }
     } else {
       // Player is UNDER Stair 1 (pos.y < rampY - 0.4)
-      // Check low headroom wedge where standing is impossible (< 1.8m headroom)
-      const headroom = (rampY - 0.25) - pos.y;
-      if (headroom < 1.8 && pos.z >= -4.0 && pos.z <= 0.1) {
-        if (pos.x + radius > 6.75 && pos.x - radius < 10.25) {
-          if (pos.z > -3.5) {
-            if (pos.x < 8.5) pos.x = 6.75 - radius;
-            else pos.x = 10.25 + radius;
-          }
-        }
+      // Solid low-headroom wedge where headroom < 1.85m (z in [-0.2, 4.2])
+      const wedgeMinX = 6.75;
+      const wedgeMaxX = 10.25;
+      const wedgeMinZ = -0.2;
+      const wedgeMaxZ = 4.2;
+
+      if (pos.x + radius > wedgeMinX && pos.x - radius < wedgeMaxX &&
+          pos.z + radius > wedgeMinZ && pos.z - radius < wedgeMaxZ) {
+        const pushLeft = Math.abs(pos.x - (wedgeMinX - radius));
+        const pushRight = Math.abs(pos.x - (wedgeMaxX + radius));
+        const pushBack = Math.abs(pos.z - (wedgeMinZ - radius));
+        const pushFront = Math.abs(pos.z - (wedgeMaxZ + radius));
+        const minPush = Math.min(pushLeft, pushRight, pushBack, pushFront);
+        if (minPush === pushLeft) pos.x = wedgeMinX - radius;
+        else if (minPush === pushRight) pos.x = wedgeMaxX + radius;
+        else if (minPush === pushBack) pos.z = wedgeMinZ - radius;
+        else pos.z = wedgeMaxZ + radius;
       }
-      // If headroom >= 1.8m (z > 0.1 up to 6.0), player is free to cross under the stairs!
     }
   }
 
-  // West Stair 2: x in [-10.25, -6.75], z in [-6.0, 4.0]
-  if (pos.z >= -6.5 && pos.z <= 4.5) {
-    const clampedZ = Math.max(-6.0, Math.min(pos.z, 4.0));
-    const rampY = 6.0 - ((clampedZ - (-6.0)) / 10.0) * 5.0;
+  // West Stair 2: x in [-10.25, -6.75], z in [-4.0, 6.0]
+  if (pos.z >= -4.5 && pos.z <= 6.5) {
+    const clampedZ = Math.max(-4.0, Math.min(pos.z, 6.0));
+    const rampY = 1.0 + ((clampedZ - (-4.0)) / 10.0) * 5.0;
 
     if (pos.y >= rampY - 0.4) {
       // Player is walking ON Stair 2: railings keep player within stair edges
-      if (pos.z >= -5.8 && pos.z <= 3.8) {
+      if (pos.z >= -3.8 && pos.z <= 5.8) {
         if (pos.x < -10.25 + radius && pos.x > -10.25 - radius) pos.x = -10.25 + radius;
         else if (pos.x > -6.75 - radius && pos.x < -6.75 + radius) pos.x = -6.75 - radius;
       }
     } else {
       // Player is UNDER Stair 2 (pos.y < rampY - 0.4)
-      // Check low headroom wedge (< 1.8m headroom)
-      const headroom = (rampY - 0.25) - pos.y;
-      if (headroom < 1.8 && pos.z >= -0.1 && pos.z <= 4.0) {
-        if (pos.x + radius > -10.25 && pos.x - radius < -6.75) {
-          if (pos.z < 3.5) {
-            if (pos.x > -8.5) pos.x = -6.75 + radius;
-            else pos.x = -10.25 - radius;
-          }
-        }
+      // Solid low-headroom wedge where headroom < 1.85m (z in [-4.2, 0.2])
+      const wedgeMinX = -10.25;
+      const wedgeMaxX = -6.75;
+      const wedgeMinZ = -4.2;
+      const wedgeMaxZ = 0.2;
+
+      if (pos.x + radius > wedgeMinX && pos.x - radius < wedgeMaxX &&
+          pos.z + radius > wedgeMinZ && pos.z - radius < wedgeMaxZ) {
+        const pushLeft = Math.abs(pos.x - (wedgeMinX - radius));
+        const pushRight = Math.abs(pos.x - (wedgeMaxX + radius));
+        const pushBack = Math.abs(pos.z - (wedgeMinZ - radius));
+        const pushFront = Math.abs(pos.z - (wedgeMaxZ + radius));
+        const minPush = Math.min(pushLeft, pushRight, pushBack, pushFront);
+        if (minPush === pushLeft) pos.x = wedgeMinX - radius;
+        else if (minPush === pushRight) pos.x = wedgeMaxX + radius;
+        else if (minPush === pushBack) pos.z = wedgeMinZ - radius;
+        else pos.z = wedgeMaxZ + radius;
       }
-      // If headroom >= 1.8m (z < -0.1 down to -6.0), player is free to cross under the stairs!
     }
   }
 
@@ -825,14 +848,14 @@ function updatePlayer(delta) {
     const nf = moveForward / len;
     const nr = moveRight / len;
 
-    // In Three.js world coordinates with camera rotation (pitch, yaw + PI, 0, 'YXZ'):
-    // At yaw = 0, camera faces +Z and camera right is -X.
-    // Forward vector in horizontal plane: ( sin(yaw), 0,  cos(yaw))
-    // Right vector in horizontal plane:   (-cos(yaw), 0,  sin(yaw))
+    // In Three.js coordinates with camera rotation (pitch, yaw, 0, 'YXZ'):
+    // At yaw = 0, camera faces -Z (North) and camera right is +X (East).
+    // Forward vector in horizontal plane: (-sin(yaw), 0, -cos(yaw))
+    // Right vector in horizontal plane:   ( cos(yaw), 0, -sin(yaw))
     const sinY = Math.sin(state.yaw);
     const cosY = Math.cos(state.yaw);
-    const dx = (nf * sinY - nr * cosY) * PLAYER_SPEED * delta;
-    const dz = (nf * cosY + nr * sinY) * PLAYER_SPEED * delta;
+    const dx = (-nf * sinY + nr * cosY) * PLAYER_SPEED * delta;
+    const dz = (-nf * cosY - nr * sinY) * PLAYER_SPEED * delta;
 
     state.playerPos.x += dx;
     state.playerPos.z += dz;
@@ -849,15 +872,26 @@ function updatePlayer(delta) {
     state.isGrounded
   );
 
-  // Ceiling collision (e.g. 1st floor underside at y = 5.5)
+  // Ceiling collision (e.g. 1st floor underside at y = 5.5, or stair underside)
   const ceilingY = getCeilingHeightAbove(
     state.playerPos.x,
     state.playerPos.y,
     state.playerPos.z
   );
   if (state.playerPos.y + 1.8 > ceilingY) {
-    state.playerPos.y = ceilingY - 1.8;
+    // Keep feet on floor: ceiling must NEVER push player below floor height
+    const safeMinY = (targetFloorY > -900) ? targetFloorY : 1.0;
+    state.playerPos.y = Math.max(safeMinY, ceilingY - 1.8);
     if (state.velocityY > 0) state.velocityY = 0;
+  }
+
+  // Safety floor check: anywhere inside the 40x40 arena bounds, ground floor at 1.0 is solid!
+  if (state.playerPos.x >= -20 && state.playerPos.x <= 20 && state.playerPos.z >= -20 && state.playerPos.z <= 20) {
+    if (state.playerPos.y < 1.0) {
+      state.playerPos.y = 1.0;
+      state.velocityY = 0;
+      state.isGrounded = true;
+    }
   }
 
   if (state.isGrounded) {
@@ -910,8 +944,8 @@ function updatePlayer(delta) {
     const targetGunX = state.isZoomed ? 0.0 : 0.32;
     const targetGunY = state.isZoomed ? -0.17 : -0.24;
     const targetGunZ = state.isZoomed ? -0.42 : -0.55;
-    const targetRotX = state.isZoomed ? THREE.MathUtils.degToRad(-8) : THREE.MathUtils.degToRad(-20);
-    const targetRotY = state.isZoomed ? THREE.MathUtils.degToRad(0) : THREE.MathUtils.degToRad(-20);
+    const targetRotX = state.isZoomed ? THREE.MathUtils.degToRad(0) : THREE.MathUtils.degToRad(-5);
+    const targetRotY = state.isZoomed ? THREE.MathUtils.degToRad(0) : THREE.MathUtils.degToRad(-15);
     const targetRotZ = state.isZoomed ? THREE.MathUtils.degToRad(0) : THREE.MathUtils.degToRad(-5);
 
     localGunMesh.position.x = THREE.MathUtils.lerp(localGunMesh.position.x, targetGunX, Math.min(1.0, delta * 15.0));
@@ -925,7 +959,7 @@ function updatePlayer(delta) {
   // Update Camera Position & Rotation
   // Camera eye level is player standing position + 1.7 units
   camera.position.set(state.playerPos.x, state.playerPos.y + 1.7, state.playerPos.z);
-  camera.rotation.set(state.pitch, state.yaw + Math.PI, 0, 'YXZ');
+  camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
 
   // Network position synchronization
   syncPlayerNetwork();
@@ -953,23 +987,23 @@ function fireBullet() {
 
   // Bullet spawn: player position + eye offset
   const bulletPos = camera.position.clone();
-  const dirEuler = new THREE.Euler(state.pitch, state.yaw + Math.PI, 0, 'YXZ');
+  const dirEuler = new THREE.Euler(state.pitch, state.yaw, 0, 'YXZ');
   const bulletDir = new THREE.Vector3(0, 0, -1).applyEuler(dirEuler).normalize();
 
-  // Bullet velocity matching Ursina physics
+  // Bullet velocity matching Three.js forward direction
   const velocity = bulletDir.clone().multiplyScalar(BULLET_SPEED);
-  const yawDeg = THREE.MathUtils.radToDeg(state.yaw);
+  const ursinaYawDeg = (-THREE.MathUtils.radToDeg(state.yaw) % 360 + 360) % 360;
   const pitchDeg = THREE.MathUtils.radToDeg(state.pitch);
 
   // Spawn visual bullet
   spawnVisualBullet(bulletPos, velocity, 10, false);
 
-  // Send bullet packet over network
+  // Send bullet packet over network (Z negated for server protocol)
   sendPacket({
     object: 'bullet',
-    position: [bulletPos.x, bulletPos.y, bulletPos.z],
+    position: [bulletPos.x, bulletPos.y, -bulletPos.z],
     damage: 10,
-    direction: yawDeg,
+    direction: ursinaYawDeg,
     x_direction: pitchDeg
   });
 
@@ -1062,14 +1096,14 @@ function updateBullets(delta) {
 
     // Check hit against stair ramps
     if (!hitObstacle) {
-      if (currPos.x >= 6.75 && currPos.x <= 10.25 && currPos.z >= -4.0 && currPos.z <= 6.0) {
-        const rampY = 1.0 + ((currPos.z - (-4.0)) / 10.0) * 5.0;
-        if (Math.abs(currPos.y - rampY) <= 0.35 || (currPos.z < 0.1 && currPos.y <= rampY)) {
+      if (currPos.x >= 6.75 && currPos.x <= 10.25 && currPos.z >= -6.0 && currPos.z <= 4.0) {
+        const rampY = 1.0 + ((4.0 - currPos.z) / 10.0) * 5.0;
+        if (Math.abs(currPos.y - rampY) <= 0.35 || (currPos.z > -0.1 && currPos.y <= rampY)) {
           hitObstacle = true;
         }
-      } else if (currPos.x >= -10.25 && currPos.x <= -6.75 && currPos.z >= -6.0 && currPos.z <= 4.0) {
-        const rampY = 6.0 - ((currPos.z - (-6.0)) / 10.0) * 5.0;
-        if (Math.abs(currPos.y - rampY) <= 0.35 || (currPos.z > -0.1 && currPos.y <= rampY)) {
+      } else if (currPos.x >= -10.25 && currPos.x <= -6.75 && currPos.z >= -4.0 && currPos.z <= 6.0) {
+        const rampY = 1.0 + ((currPos.z - (-4.0)) / 10.0) * 5.0;
+        if (Math.abs(currPos.y - rampY) <= 0.35 || (currPos.z < 0.1 && currPos.y <= rampY)) {
           hitObstacle = true;
         }
       }
@@ -1134,18 +1168,18 @@ function triggerDeath() {
   // Hide local gun
   if (localGunMesh) localGunMesh.visible = false;
 
-  // Spectator camera matching Ursina client/player.py: world_position = Vec3(0, 7, -35)
-  state.playerPos.set(0, 7, -35);
+  // Spectator camera matching Ursina client/player.py: world_position = Vec3(0, 7, -35) -> (0, 7, 35) in Three.js looking North (-Z)
+  state.playerPos.set(0, 7, 35);
   state.yaw = 0;
-  state.pitch = THREE.MathUtils.degToRad(-25);
+  state.pitch = THREE.MathUtils.degToRad(-15);
   state.velocityY = 0;
   state.isGrounded = false;
   state.isZoomed = false;
   camera.fov = 75;
   camera.updateProjectionMatrix();
   updateCrosshairZoomUI();
-  camera.position.set(0, 7, -35);
-  camera.rotation.set(state.pitch, state.yaw + Math.PI, 0, 'YXZ');
+  camera.position.set(0, 7, 35);
+  camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
 
   // Send player state to server with 0 health
   sendPlayerState(true);
@@ -1178,7 +1212,7 @@ function respawnPlayer() {
   state.yaw = 0;
   state.pitch = 0;
   camera.position.set(state.playerPos.x, state.playerPos.y + 1.7, state.playerPos.z);
-  camera.rotation.set(0, Math.PI, 0, 'YXZ');
+  camera.rotation.set(0, 0, 0, 'YXZ');
 
   // Unhide local gun
   if (localGunMesh) {
@@ -1190,11 +1224,11 @@ function respawnPlayer() {
   updateHealthUI();
   updateAmmoUI();
 
-  // Notify server of respawn
+  // Notify server of respawn (Z negated for server protocol)
   sendPacket({
     object: 'respawn',
     id: state.id,
-    position: [spawn.x, spawn.y, spawn.z],
+    position: [spawn.x, spawn.y, -spawn.z],
     health: MAX_HEALTH
   });
 
@@ -1269,11 +1303,12 @@ function sendPlayerState(force = false) {
   const rotDiff = Math.abs(state.yaw - state.prevYaw);
 
   if (force || posDiff > 0.01 || rotDiff > 0.01) {
+    const ursinaRotation = (-THREE.MathUtils.radToDeg(state.yaw) % 360 + 360) % 360;
     sendPacket({
       object: 'player',
       id: state.id,
-      position: [state.playerPos.x, state.playerPos.y, state.playerPos.z],
-      rotation: THREE.MathUtils.radToDeg(state.yaw),
+      position: [state.playerPos.x, state.playerPos.y, -state.playerPos.z],
+      rotation: ursinaRotation,
       health: state.health,
       joined: false,
       left: false
@@ -1335,10 +1370,10 @@ function handleServerMessage(msg) {
     }
 
     if (msg.position) {
-      enemy.targetPos.set(msg.position[0], msg.position[1], msg.position[2]);
+      enemy.targetPos.set(msg.position[0], msg.position[1], -msg.position[2]);
     }
     if (msg.rotation != null) {
-      enemy.targetYaw = THREE.MathUtils.degToRad(msg.rotation);
+      enemy.targetYaw = -THREE.MathUtils.degToRad(msg.rotation);
     }
     if (msg.health != null) {
       enemy.health = msg.health;
@@ -1352,8 +1387,8 @@ function handleServerMessage(msg) {
     const enemy = state.enemies.get(enemyId);
     if (enemy) {
       if (msg.position) {
-        enemy.targetPos.set(...msg.position);
-        enemy.mesh.position.set(...msg.position);
+        enemy.targetPos.set(msg.position[0], msg.position[1], -msg.position[2]);
+        enemy.mesh.position.set(msg.position[0], msg.position[1], -msg.position[2]);
       }
       enemy.health = msg.health ?? MAX_HEALTH;
       enemy.mesh.visible = true;
@@ -1364,13 +1399,16 @@ function handleServerMessage(msg) {
     if (msg.position) {
       const yawRad = THREE.MathUtils.degToRad(msg.direction || 0);
       const pitchRad = THREE.MathUtils.degToRad(msg.x_direction || 0);
+      // In Ursina: vx = sin(yaw)*cos(pitch), vy = sin(pitch), vz = cos(yaw)*cos(pitch)
+      // In Three.js: x = vx, y = vy, z = -vz
       const velocity = new THREE.Vector3(
         Math.sin(yawRad) * Math.cos(pitchRad),
         Math.sin(pitchRad),
-        Math.cos(yawRad) * Math.cos(pitchRad)
+        -Math.cos(yawRad) * Math.cos(pitchRad)
       ).multiplyScalar(BULLET_SPEED);
 
-      spawnVisualBullet(new THREE.Vector3(...msg.position), velocity, msg.damage || 10, true);
+      const spawnPos = new THREE.Vector3(msg.position[0], msg.position[1], -msg.position[2]);
+      spawnVisualBullet(spawnPos, velocity, msg.damage || 10, true);
       playGunSound();
     }
   } else if (objType === 'health_update') {
